@@ -105,3 +105,9 @@ There are lots of properties that one might wish to measure about this system: a
 Set up `NotifySpinFlip` and `NotifyAvalancheEnd` routines for your simulation, and add the two observers appropriately.
 
 Finally, plot the magnetization curve \( M(H) \) and the avalanche size distribution histogram \( D(S) \) for the three systems you ran in part (c).
+
+![avalanche_ising](https://github.com/user-attachments/assets/996be942-5f84-4978-af15-b43647be4320)
+
+![magnetization avalanche](https://github.com/user-attachments/assets/933d2af3-b9a0-43ff-bcb9-c4ef07e5fa2b)
+
+
