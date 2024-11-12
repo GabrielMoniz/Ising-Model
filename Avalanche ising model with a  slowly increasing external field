@@ -1,0 +1,325 @@
+A piece of magnetic material exposed to an increasing external field 
+𝐻
+(
+𝑡
+)
+H(t) will magnetize in a series of sharp jumps, or avalanches. These avalanches arise as magnetic domain walls in the material are pushed by the external field through a rugged potential energy landscape due to irregularities and impurities in the magnet. The magnetic signal resulting from these random avalanches is called Barkhausen noise.
+
+In this exercise, we model this system with a nonequilibrium lattice model: the Random Field Ising Model.
+
+Hamiltonian
+The Hamiltonian (or energy function) for our system is given by
+
+𝐻
+=
+−
+𝐽
+∑
+⟨
+𝑖
+,
+𝑗
+⟩
+𝑆
+𝑖
+𝑆
+𝑗
+−
+∑
+𝑖
+(
+𝐻
++
+ℎ
+𝑖
+)
+𝑆
+𝑖
+H=−J 
+⟨i,j⟩
+∑
+​
+ S 
+i
+​
+ S 
+j
+​
+ − 
+i
+∑
+​
+ (H+h 
+i
+​
+ )S 
+i
+​
+ 
+where:
+
+𝐻
+H is the Hamiltonian,
+𝐽
+J is the interaction strength between spins,
+𝑆
+𝑖
+S 
+i
+​
+  represents the spin at site 
+𝑖
+i,
+⟨
+𝑖
+,
+𝑗
+⟩
+⟨i,j⟩ denotes summation over nearest neighbors,
+𝐻
+H is the external magnetic field,
+ℎ
+𝑖
+h 
+i
+​
+  is a random field at each site 
+𝑖
+i.
+Spin Flip Rule
+Each spin 
+𝑆
+𝑖
+=
+±
+1
+S 
+i
+​
+ =±1 lies on a square or cubic lattice with periodic boundary conditions. The coupling 
+𝐽
+J and the external field 
+𝐻
+H follow the traditional Ising model. The disorder in the magnet is incorporated using the random field 
+ℎ
+𝑖
+h 
+i
+​
+ , independently chosen at each lattice site from a Gaussian probability distribution with standard deviation 
+𝑅
+R:
+
+𝑃
+(
+ℎ
+)
+=
+1
+2
+𝜋
+𝑅
+𝑒
+−
+ℎ
+2
+/
+2
+𝑅
+2
+(8.28)
+P(h)= 
+2πR
+​
+ 
+1
+​
+ e 
+−h 
+2
+ /2R 
+2
+ 
+ (8.28)
+We are not interested in thermal equilibrium (where there would be no hysteresis). Instead, we set the temperature to zero. We start with all spins pointing down and adiabatically (infinitely slowly) increase 
+𝐻
+(
+𝑡
+)
+H(t) from 
+−
+∞
+−∞ to 
++
+∞
++∞.
+
+Our rules for evolving the spin configuration are:
+
+Each spin flips when doing so would decrease the energy. This occurs at site 
+𝑖
+i when the local field at that site,
+
+𝐽
+∑
+𝑗
+ 
+nbr to
+ 
+𝑖
+𝑆
+𝑗
++
+ℎ
+𝑖
++
+𝐻
+(
+𝑡
+)
+(8.29)
+J 
+jnbr toi
+∑
+​
+ S 
+j
+​
+ +h 
+i
+​
+ +H(t)(8.29)
+changes from negative to positive.
+
+A spin can be flipped in two ways:
+
+It can be triggered when one of its neighbors flips (participating in a propagating avalanche).
+It can be triggered by the slow increase of the external field, starting a new avalanche.
+Part (a): Setting up the Simulation
+Initialize the Lattices:
+
+Set up the spin lattice s[m][n] and the random field lattice h[m][n].
+In three dimensions, add an extra index to the arrays.
+Fill s[m][n] with down-spins 
+𝑆
+=
+−
+1
+S=−1 and h[m][n] with random fields from the Gaussian distribution 
+𝑃
+(
+ℎ
+)
+P(h) in equation (8.28).
+Write Helper Routines:
+
+FlipSpin(i, j): Given indices 
+𝑖
+i and 
+𝑗
+j, flip the spin from 
+𝑆
+=
+−
+1
+S=−1 to 
+𝑆
+=
++
+1
+S=+1. Return an error if the spin is already flipped.
+NeighborsUp(i, j): Calculate the number of up-neighbors for the spin, implementing periodic boundary conditions.
+Adiabatically Increase 
+𝐻
+H:
+
+To start a new avalanche, search for the next unflipped spin ready to flip, increase 
+𝐻
+H just enough to flip it, and propagate the avalanche as follows:
+Find the Triggering Spin: Find the unflipped site with the largest local field due to neighbors and random field, 
+𝐽
+∑
+𝑗
+ 
+nbr to
+ 
+𝑖
+𝑆
+𝑗
++
+ℎ
+𝑖
+J∑ 
+jnbr toi
+​
+ S 
+j
+​
+ +h 
+i
+​
+ .
+Increment 
+𝐻
+H to reach this internal field threshold.
+Queue Processing:
+Place the triggering spin in a first-in–first-out queue.
+While the queue is not empty:
+Pop a spin from the queue.
+Flip it if it hasn’t already flipped.
+Push all unflipped neighbors with positive local fields onto the queue.
+Part (b): Implementing the Avalanche
+BruteForceNextAvalanche: Check all unflipped spins and return the position of the next to flip based on its local field.
+
+PropagateAvalanche:
+
+Given the triggering spin, implement steps (3)–(5) to propagate the avalanche.
+For visualization, color the spins that flip.
+Run Simulations:
+
+Simulate a 
+300
+×
+300
+300×300 system at different 
+𝑅
+R values: 
+𝑅
+=
+1.4
+R=1.4, 
+𝑅
+=
+0.9
+R=0.9, and 
+𝑅
+=
+0.7
+R=0.7.
+If running in three dimensions, use a 
+5
+0
+3
+50 
+3
+  lattice with 
+𝑅
+=
+4
+R=4, 
+𝑅
+=
+2.16
+R=2.16, and 
+𝑅
+=
+2
+R=2.
+Display the resulting avalanche patterns.
+Measurements and Analysis
+There are various properties you might want to measure about this system:
+
+Avalanche sizes and correlation functions.
+Hysteresis loop shapes.
+Average pulse shapes during avalanches.
+To avoid cluttering the inner loop of your code, consider using a subject–observer design pattern. Each time a spin flips, the observer can record relevant data for analysis.
