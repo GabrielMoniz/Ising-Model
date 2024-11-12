@@ -1,92 +1,135 @@
-# Exercise: Modeling Barkhausen Noise
+import matplotlib.pyplot as plt
+import random
+import numpy as np
 
-A piece of magnetic material exposed to an increasing external field \( H(t) \) will magnetize in a series of sharp jumps, or **avalanches**. These avalanches arise as magnetic domain walls in the material are pushed by the external field through a rugged potential energy landscape due to irregularities and impurities in the magnet. The magnetic signal resulting from these random avalanches is called **Barkhausen noise**.
+#creates the initial spin configuration with all spin down#
+def initial_spin(N):
+  s=[]
+  s_row=[]
+  for i in range(N):
+    for j in range(N):
+      s_row.append(-1)
+    s.append(s_row)
+    s_row=[]
+  return s
 
-In this exercise, we model this system with a nonequilibrium lattice model: the **Random Field Ising Model**.
+#creates the random field configuration given by a gaussian distribution with standard deviation R#
+def initial_randomfield(N,R):
+  h=[]
+  h_row=[]
+  for i in range(N):
+    for j in range(N):
+      h_row.append(random.gauss(0, R))
+    h.append(h_row)
+    h_row=[]
+  return h
 
-## Hamiltonian
+#given a spin lattice s, this function flips the spin at a site (i,j) if S_{i,j}=-1#
+def FlipSpin(s,i,j):
+  if s[i][j] == -1 :
+    s[i][j] = 1
+  else:
+    print("spin already fliped")
 
-The Hamiltonian (or energy function) for our system is given by:
 
-$$
-\mathcal{H} = -J \sum_{\langle i,j \rangle} S_i S_j - \sum_i \left( H + h_i \right) S_i
-$$
+#create a list with the coordinates of the the neirghbors of the point (i,j), which may seem a pointless function to define in this case, however if we are considering a more complex graph instead of the square of cubic lattice, it's reasonale to write a code in terms of a general set of neighbours
+def neighbours(i,j,N):
+  # here the modulo operation %N is using to account the case where i or j is equal to N-1, and due to the periodic boundary conditions i+1 or j+1 should be taken to be 0#
+  return [[(i+1)%N, j], [(i-1)%N, j], [i, (j+1)%N], [i, (j-1)%N]]
 
-where:
-- **H** is the Hamiltonian,
-- **J** is the interaction strength between spins,
-- **S_i** represents the spin at site **i**,
-- **⟨i,j⟩** denotes summation over nearest neighbors,
-- **H** is the external magnetic field,
-- **h_i** is a random field at each site **i**.
+#we don't need to actually to count the number of spin up or spin down neirbours, we need only it's sum to calculate the field, so lets define a funtion to do it more compactly
+def sum_spin(s,i,j):
 
-## Spin Flip Rule
+    N=len(s)
+    sum=0
+    for n in neighbours(i,j,N=len(s)):
+      sum+=s[n[0]][n[1]]
+    return sum
 
-Each spin \( S_i = \pm 1 \) lies on a square or cubic lattice with periodic boundary conditions. The coupling **J** and the external field **H** follow the traditional Ising model. The disorder in the magnet is incorporated using the random field **h_i**, independently chosen at each lattice site from a Gaussian probability distribution with standard deviation **R**:
 
-$$
-P(h) = \frac{1}{\sqrt{2 \pi R}} e^{-h^2 / 2R^2}
-$$
+def BruteForceNextAvalanche(s,h):
+  #starting point that allow at least one site to have an internal field greater than this value
+  max=-100
 
-We are not interested in thermal equilibrium (where there would be no hysteresis). Instead, we set the temperature to zero. We start with all spins pointing down and adiabatically (infinitely slowly) increase \( H(t) \) from \( -\infty \) to \( +\infty \).
+  for i in range(len(s)):
+    for j in range(len(s)):
+      #Calculates the internal fiel for each particle#
+      internal_field= sum_spin(s,i,j)+h[i][j]
+      # stores the maximum internal field found
+      if internal_field > max and internal_field<0:
+        max=internal_field
+        max_i=i
+        max_j=j
 
-## Rules for Evolving Spin Configuration
+  return max, max_i, max_j
 
-Each spin flips when doing so would decrease the energy. This occurs at site **i** when the local field at that site,
+def PropagateAvalanche(s,h):
+  N=len(s)
+  M=np.array(s).sum()
+  M_list=[M]
+  avalanche_sizes=[]
+  while M < len(s)**2:
+    max, i_max, j_max = BruteForceNextAvalanche(s,h)
 
-$$
-J \sum_{j \, \text{nbr to} \, i} S_j + h_i + H(t)
-$$
+    FlipSpin(s, i_max, j_max)
 
-changes from negative to positive.
+    for i in range(N):
+      for j in range(N):
+        h[i][j]+= -max
 
-A spin can be flipped in two ways:
+    #create a list with the coordinates of the the neirghbors of the point (i,j)
+    neighbourhood=neighbours(i_max, j_max, N)
+    avalanche_size=1
 
-1. It can be triggered when one of its neighbors flips (participating in a propagating avalanche).
-2. It can be triggered by the slow increase of the external field, starting a new avalanche.
+    for neighbour in neighbourhood:
+      i= neighbour[0]
+      j= neighbour[1]
 
-## Part (a): Setting up the Simulation
+      #find which neighbours have achieved a positive internal field and then flips them
+      if sum_spin(s, i, j)+h[i][j]>0 and s[i][j]==-1:
+        FlipSpin(s, i, j)
+        avalanche_size+=1
 
-### Initialize the Lattices:
+        #once a spin is flipped it's neighbours may be flipped as well and hence they must be added to the loop to be analysed until no more spin is flipped
+        for n in neighbours(i, j, N):
+          neighbourhood.append(n)
 
-- Set up the spin lattice `s[m][n]` and the random field lattice `h[m][n]`.
-- In three dimensions, add an extra index to the arrays.
-- Fill `s[m][n]` with down-spins \( S = -1 \) and `h[m][n]` with random fields from the Gaussian distribution \( P(h) \) in equation (8.28).
+    M = np.array(s).sum()
+    M_list.append(M)
+    avalanche_sizes.append(avalanche_size)
 
-### Write Helper Routines:
 
-- `FlipSpin(i, j)`: Given indices \( i \) and \( j \), flip the spin from \( S = -1 \) to \( S = +1 \). Return an error if the spin is already flipped.
-- `NeighborsUp(i, j)`: Calculate the number of up-neighbors for the spin, implementing periodic boundary conditions.
+  return M_list, avalanche_sizes
 
-### Adiabatically Increase \( H \):
+# Generate random data for the histogram
+data = b
+b_x=[]
+for i in range(len(b)):
+  b_x.append(i+1)
 
-To start a new avalanche, search for the next unflipped spin ready to flip, increase \( H \) just enough to flip it, and propagate the avalanche as follows:
+# Plotting a basic histogram
+plt.plot(b_x, b)
 
-1. **Find the Triggering Spin**: Find the unflipped site with the largest local field due to neighbors and random field, \( J \sum_{j \, \text{nbr to} \, i} S_j + h_i \).
-2. **Increment \( H \)** to reach this internal field threshold.
+# Adding labels and title
+plt.xlabel('Avalanche')
+plt.ylabel('Avalanche Size')
+plt.title('Avalanche size evolution')
 
-### Queue Processing:
+# Display the plot
+plt.show()
 
-- Place the triggering spin in a first-in–first-out queue.
-- While the queue is not empty:
-  - Pop a spin from the queue.
-  - Flip it if it hasn’t already flipped.
-  - Push all unflipped neighbors with positive local fields onto the queue.
+data = a
+a_x=[]
+for i in range(len(a)):
+  a_x.append(i+1)
 
-## Part (b): Implementing the Avalanche
+# Plotting a basic histogram
+plt.plot(a_x, a)
 
-- `BruteForceNextAvalanche`: Check all unflipped spins and return the position of the next to flip based on its local field.
-- `PropagateAvalanche`: Given the triggering spin, implement steps (3)–(5) to propagate the avalanche. For visualization, color the spins that flip.
+# Adding labels and title
+plt.xlabel('Avalanche')
+plt.ylabel('Magnetization')
+plt.title('Magnetization evolution')
 
-### Run Simulations:
-
-- Simulate a \( 300 \times 300 \) system at different \( R \) values: \( R = 1.4 \), \( R = 0.9 \), and \( R = 0.7 \).
-- If running in three dimensions, use a \( 50^3 \) lattice with \( R = 4 \), \( R = 2.16 \), and \( R = 2 \).
-- Display the resulting avalanche patterns.
-
-## Measurements and Analysis
-
-There are various properties you might want to measure about this system:
-- Avalanche sizes and correlation functions.
-- Hysteresis loop shapes.
-- Average pulse shapes during avalanches.
+# Display the plot
+plt.show()
